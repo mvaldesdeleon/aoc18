@@ -15,34 +15,32 @@ frequency :: [Integer] -> Freq
 frequency = sum
 
 firstDupeFreq :: [Integer] -> Freq
-firstDupeFreq ns = evalState (loop ns) (empty, 0)
+firstDupeFreq ns = evalState (findDupe $ cycle ns) (empty, 0)
 
 type Freqs = Set Freq
 type FreqsState = State (Freqs, Freq)
 
-updateFreqState :: Freq -> (Freqs, Freq) -> (Freqs, Freq)
-updateFreqState freq (freqs, _) = (insert freq freqs, freq)
-
-step :: Integer -> FreqsState (Maybe Freq)
-step n = do
+advanceAndEval :: Integer -> FreqsState (Maybe Freq)
+advanceAndEval n = do
     (freqs, lastFreq) <- get
     let nextFreq = lastFreq + n
-    if nextFreq `member` freqs then
+    if nextFreq `member` freqs then do
+        put (freqs, nextFreq)
         return $ Just nextFreq
     else do
-        modify $ updateFreqState nextFreq
+        put (insert nextFreq freqs, nextFreq)
         return Nothing
 
-loop :: [Integer] -> FreqsState Freq
-loop [] = error "No results"
-loop (n:ns) = do
-    res <- step n
+findDupe :: [Integer] -> FreqsState Freq
+findDupe [] = error "No results"
+findDupe (n:ns) = do
+    res <- advanceAndEval n
     case res of
         Just freq -> return freq
-        Nothing -> loop ns
+        Nothing -> findDupe ns
 
 main :: IO ()
 main = do
     input <- parse <$> loadInput
     print $ frequency input
-    print $ firstDupeFreq (cycle input)
+    print $ firstDupeFreq input
