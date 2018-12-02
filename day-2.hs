@@ -12,7 +12,7 @@ checksumParams id = (2 `elem` freqs, 3 `elem` freqs)
     where freqs = map length . group . sort $ id
 
 addParams :: (Integer, Integer) -> (Bool, Bool) -> (Integer, Integer)
-addParams (a, b) (x, y) = (if x then succ a else a, if y then succ b else b)
+addParams (n, m) (p, q) = (if p then succ n else n, if q then succ m else m)
 
 mult :: (Integer, Integer) -> Integer
 mult = uncurry (*)
