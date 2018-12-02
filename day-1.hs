@@ -1,4 +1,3 @@
--- Day 1
 import Control.Monad.State
 import Data.Set (Set, empty, insert, member)
 
