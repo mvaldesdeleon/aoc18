@@ -2,7 +2,7 @@
 import Control.Monad.State
 import Data.Set (Set, empty, insert, member)
 
-loadInput = readFile "inputs/day-1a.txt"
+loadInput = readFile "inputs/day-1.txt"
 
 fixPositives num@(n:ns) = if n == '+' then ns else num
 
