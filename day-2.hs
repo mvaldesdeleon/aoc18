@@ -17,7 +17,7 @@ addParams (n, m) (p, q) = (if p then succ n else n, if q then succ m else m)
 mult :: (Integer, Integer) -> Integer
 mult = uncurry (*)
 
-checksum :: [String] -> Integer
+checksum :: [ID] -> Integer
 checksum = mult . foldl addParams (0, 0) . map checksumParams
 
 consecutiveDupe :: Ord a => [a] -> Maybe a
