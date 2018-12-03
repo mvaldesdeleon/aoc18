@@ -1,11 +1,14 @@
-import Control.Monad.State
-import Data.Set (Set, empty, insert, member)
+import           Control.Monad.State
+import           Data.Set            (Set, empty, insert, member)
 
 loadInput :: IO String
 loadInput = readFile "inputs/day-1.txt"
 
 fixPositives :: String -> String
-fixPositives num@(n:ns) = if n == '+' then ns else num
+fixPositives num@(n:ns) =
+    if n == '+'
+        then ns
+        else num
 
 parseInput :: String -> [Integer]
 parseInput = map (read . fixPositives) . lines
@@ -19,18 +22,20 @@ firstDupeFreq :: [Integer] -> Freq
 firstDupeFreq ns = evalState (findDupe $ cycle ns) (empty, 0)
 
 type Freqs = Set Freq
+
 type FreqsState = State (Freqs, Freq)
 
 advanceAndEval :: Integer -> FreqsState (Maybe Freq)
 advanceAndEval n = do
     (freqs, lastFreq) <- get
     let nextFreq = lastFreq + n
-    if nextFreq `member` freqs then do
-        put (freqs, nextFreq)
-        return $ Just nextFreq
-    else do
-        put (insert nextFreq freqs, nextFreq)
-        return Nothing
+    if nextFreq `member` freqs
+        then do
+            put (freqs, nextFreq)
+            return $ Just nextFreq
+        else do
+            put (insert nextFreq freqs, nextFreq)
+            return Nothing
 
 findDupe :: [Integer] -> FreqsState Freq
 findDupe [] = error "No results"
@@ -38,7 +43,7 @@ findDupe (n:ns) = do
     res <- advanceAndEval n
     case res of
         Just freq -> return freq
-        Nothing -> findDupe ns
+        Nothing   -> findDupe ns
 
 main :: IO ()
 main = do
