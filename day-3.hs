@@ -97,7 +97,22 @@ overlappingIntervals :: [(Integer, Integer)] -> [Integer]
 overlappingIntervals =
     map fst . filter (\(_, depth) -> depth > 1) . depthIntervals
 
+overlap :: Rect -> Rect -> Bool
+overlap a b =
+    (rectId a /= rectId b) &&
+    (rectBottom b > rectTop a) &&
+    (rectTop b < rectBottom a) &&
+    (rectRight b > rectLeft a) && (rectLeft b < rectRight a)
+  where
+    rectBottom r = rectTop r + rectHeight r
+    rectRight r = rectLeft r + rectWidth r
+
+nonOverlappingId :: [Rect] -> Integer
+nonOverlappingId rects =
+    rectId . head $ [r | r <- rects, all (not . overlap r) rects]
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
     print $ overlappedArea input
+    print $ nonOverlappingId input
