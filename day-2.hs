@@ -1,11 +1,12 @@
 import Data.List
 
+loadInput :: IO String
 loadInput = readFile "inputs/day-2.txt"
 
 type ID = String
 
-parse :: String -> [ID]
-parse = lines
+parseInput :: String -> [ID]
+parseInput = lines
 
 checksumParams :: ID -> (Bool, Bool)
 checksumParams id = (2 `elem` freqs, 3 `elem` freqs)
@@ -47,6 +48,6 @@ findCommon ids = findFrom max
 
 main :: IO ()
 main = do
-    input <- parse <$> loadInput
+    input <- parseInput <$> loadInput
     print $ checksum input
     print $ findCommon input

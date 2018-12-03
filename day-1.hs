@@ -1,12 +1,14 @@
 import Control.Monad.State
 import Data.Set (Set, empty, insert, member)
 
+loadInput :: IO String
 loadInput = readFile "inputs/day-1.txt"
 
+fixPositives :: String -> String
 fixPositives num@(n:ns) = if n == '+' then ns else num
 
-parse :: String -> [Integer]
-parse = map (read . fixPositives) . lines
+parseInput :: String -> [Integer]
+parseInput = map (read . fixPositives) . lines
 
 type Freq = Integer
 
@@ -40,6 +42,6 @@ findDupe (n:ns) = do
 
 main :: IO ()
 main = do
-    input <- parse <$> loadInput
+    input <- parseInput <$> loadInput
     print $ frequency input
     print $ firstDupeFreq input
