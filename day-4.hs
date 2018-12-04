@@ -109,8 +109,8 @@ guards = map mkGuard . groups . sleepIntervals
 
 sleepyGuard = maximumBy (compare `on` guardSleepDuration) . guards
 
-idTimesMinutes :: [Entry] -> Integer
-idTimesMinutes entries = guardId guard * minute
+idTimesMinutes1 :: [Entry] -> Integer
+idTimesMinutes1 entries = guardId guard * minute
   where
     guard = sleepyGuard entries
     minute = sleepyMinute . guardSleepIntervals $ guard
@@ -124,7 +124,38 @@ sleepyMinute sleepIntervals = fst . maximumBy (compare `on` snd) $ scanList
     sum (_, n) (x, m) = (x, n + m)
     empty = (0, 0)
 
+type Frequency = (Integer, Integer)
+
+minuteFrequencies :: [SleepInterval] -> [Frequency]
+minuteFrequencies sleepIntervals = frequencies scanList
+  where
+    toBorders SleepInterval {..} = [(tsMinute siFrom, 1), (tsMinute siTo, -1)]
+    borders = sortBy (compare `on` fst) $ sleepIntervals >>= toBorders
+    scanList = tail . scanl sum empty $ borders
+    sum (_, n) (x, m) = (x, n + m)
+    empty = (0, 0)
+    frequencies ((from, fromValue):(to, toValue):fs) =
+        if fromValue > 0
+            then [(m, fromValue) | m <- [from .. to - 1]] ++
+                 frequencies ((to, toValue) : fs)
+            else frequencies ((to, toValue) : fs)
+    frequencies _ = []
+
+idTimesMinutes2 :: [Entry] -> Integer
+idTimesMinutes2 entries = guardId * minute
+  where
+    guardId = fst guardWithMaxFreq
+    minute = fst . snd $ guardWithMaxFreq
+    guardWithMaxFreq = maximumBy (compare `on` (snd . snd)) $ guardsWithMaxFreq
+    guardsWithMaxFreq =
+        (\Guard {..} ->
+             ( guardId
+             , maximumBy (compare `on` snd) . minuteFrequencies $
+               guardSleepIntervals)) <$>
+        guards entries
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
-    print $ idTimesMinutes input
+    print $ idTimesMinutes1 input
+    print $ idTimesMinutes2 input
