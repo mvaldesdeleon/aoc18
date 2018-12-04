@@ -43,9 +43,6 @@ rect = mkRect <$> (idTag <* at) <*> (position <* colon) <*> size
   where
     mkRect id (left, top) (width, height) = Rect id top left width height
 
-test :: Parsec String () a -> String -> Either ParseError a
-test p = parse p ""
-
 parseInput :: String -> [Rect]
 parseInput input =
     case result of
