@@ -4,11 +4,11 @@ import           Data.List.Zipper
 loadInput :: IO String
 loadInput = readFile "inputs/day-5.txt"
 
-units :: [Char] -> Integer
-units = fromIntegral . length . toList . reduce . fromList . filter isAlpha
+parseInput :: String -> String
+parseInput = filter isAlpha
 
-reduce :: Zipper Char -> Zipper Char
-reduce = reduceRight
+units :: [Char] -> Integer
+units = fromIntegral . length . toList . reduceRight . fromList
 
 reduceRight :: Zipper Char -> Zipper Char
 reduceRight z =
@@ -41,7 +41,14 @@ reduceLeft z =
 match :: Char -> Char -> Bool
 match a b = a /= b && toLower a == toLower b
 
+leastUnits :: [Char] -> Integer
+leastUnits input = minimum [units $ removeUnit u input | u <- ['a' .. 'z']]
+
+removeUnit :: Char -> [Char] -> [Char]
+removeUnit u = filter ((/=) (toLower u)) . filter ((/=) (toUpper u))
+
 main :: IO ()
 main = do
-    input <- loadInput
+    input <- parseInput <$> loadInput
     print $ units input
+    print $ leastUnits input
