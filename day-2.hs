@@ -1,4 +1,5 @@
 import           Data.List
+import           Data.Maybe
 
 loadInput :: IO String
 loadInput = readFile "inputs/day-2.txt"
@@ -12,6 +13,7 @@ checksumParams :: ID -> (Bool, Bool)
 checksumParams id = (2 `elem` freqs, 3 `elem` freqs)
   where
     freqs = map length . group . sort $ id
+
 
 addParams :: (Integer, Integer) -> (Bool, Bool) -> (Integer, Integer)
 addParams (n, m) (p, q) =
@@ -38,7 +40,7 @@ consecutiveDupe _ = Nothing
 dropNth :: Integer -> [a] -> [a]
 dropNth _ [] = []
 dropNth n (a:as)
-    | n < 0 = (a : as)
+    | n < 0 = a : as
     | n == 0 = as
     | otherwise = a : dropNth (n - 1) as
 
@@ -53,10 +55,7 @@ findCommon ids = findFrom max
   where
     max = idSize ids
     findFrom 0 = error "No results"
-    findFrom n =
-        case testPosition n ids of
-            Just id -> id
-            Nothing -> findFrom (n - 1)
+    findFrom n = fromMaybe (findFrom $ n - 1) (testPosition n ids)
 
 main :: IO ()
 main = do

@@ -146,7 +146,7 @@ idTimesMinutes2 entries = guardId * minute
   where
     guardId = fst guardWithMaxFreq
     minute = fst . snd $ guardWithMaxFreq
-    guardWithMaxFreq = maximumBy (compare `on` (snd . snd)) $ guardsWithMaxFreq
+    guardWithMaxFreq = maximumBy (compare `on` (snd . snd)) guardsWithMaxFreq
     guardsWithMaxFreq =
         (\Guard {..} ->
              ( guardId

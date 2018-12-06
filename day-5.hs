@@ -45,7 +45,7 @@ leastUnits :: [Char] -> Integer
 leastUnits input = minimum [units $ removeUnit u input | u <- ['a' .. 'z']]
 
 removeUnit :: Char -> [Char] -> [Char]
-removeUnit u = filter ((/=) (toLower u)) . filter ((/=) (toUpper u))
+removeUnit u = filter (toLower u /=) . filter (toUpper u /=)
 
 main :: IO ()
 main = do
