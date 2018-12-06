@@ -61,8 +61,8 @@ newtype Areas = Areas
 area (Finite a) = a
 area _          = error "Cannot get infinite areas"
 
-largestArea :: [Coord] -> Integer
-largestArea coords =
+largestUnsafeArea :: [Coord] -> Integer
+largestUnsafeArea coords =
     maximum . map area . M.elems . M.filter isFinite . runAreas $ areas
   where
     width = maximum $ getX <$> coords
@@ -70,8 +70,7 @@ largestArea coords =
     areas = execState (getAreas width height coords) (Areas M.empty)
 
 getAreas :: Integer -> Integer -> [Coord] -> State Areas ()
-getAreas width height coords =
-    forM_ [Coord (x, y) | x <- [0 .. width], y <- [0 .. height]] step
+getAreas width height coords = forM_ (board width height) step
   where
     step coord =
         case closest coords coord of
@@ -91,6 +90,9 @@ getAreas width height coords =
                     Infinite -> Just Infinite
             Nothing -> Just $ Finite 1
 
+board :: Integer -> Integer -> [Coord]
+board width height = [Coord (x, y) | x <- [0 .. width], y <- [0 .. height]]
+
 closest :: [Coord] -> Coord -> Maybe Integer
 closest coords coord =
     indexIfUnique .
@@ -104,7 +106,21 @@ closest coords coord =
     indexIfUnique ((ia, da):rs) = Just ia
     indexIfUnique [] = Nothing
 
+safeArea :: [Coord] -> Integer
+safeArea coords = foldl countSafe 0 (board width height)
+  where
+    width = maximum $ getX <$> coords
+    height = maximum $ getY <$> coords
+    countSafe safe coord =
+        if totalDistance coords coord < 10000
+            then safe + 1
+            else safe
+
+totalDistance :: [Coord] -> Coord -> Integer
+totalDistance coords coord = sum . map (distance coord) $ coords
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
-    print $ largestArea input
+    print $ largestUnsafeArea input
+    print $ safeArea input
