@@ -16,7 +16,7 @@ reduceRight z =
         (Just v, Just n) ->
             if match v n
                 then reduceLeft $ delete . delete $ z
-                else reduceLeft z
+                else reduceRight $ right z
         _ -> z
   where
     nz = right z
@@ -26,13 +26,13 @@ reduceRight z =
 reduceLeft :: Zipper Char -> Zipper Char
 reduceLeft z =
     if beginp z
-        then reduceRight $ right z
+        then reduceRight z
         else case (mv, mp) of
                  (Just v, Just p) ->
                      if match v p
                          then reduceLeft $ delete . pop $ z
-                         else reduceRight $ right z
-                 _ -> reduceRight $ right z
+                         else reduceRight z
+                 _ -> reduceRight z
   where
     pz = left z
     mv = safeCursor z
