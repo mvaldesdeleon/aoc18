@@ -12,7 +12,7 @@ loadInput = readFile "inputs/day-6.txt"
 
 newtype Coord =
     Coord (Integer, Integer)
-    deriving (Show, Eq, Ord)
+    deriving (Show)
 
 distance :: Coord -> Coord -> Integer
 distance a b = abs (getX a - getX b) + abs (getY a - getY b)
@@ -43,16 +43,11 @@ parseInput input =
 data Area
     = Finite Integer
     | Infinite
-    deriving (Show, Eq)
+    deriving (Show)
 
 isFinite :: Area -> Bool
 isFinite Infinite = False
 isFinite _        = True
-
-instance Ord Area where
-    Finite a <= Finite b = a <= b
-    Finite _ <= Infinite = False
-    Infinite <= _ = True
 
 newtype Areas = Areas
     { runAreas :: M.Map Integer Area
