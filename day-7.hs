@@ -1,9 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE RecordWildCards  #-}
 
 import           Control.Monad
 import           Control.Monad.Loops
 import           Control.Monad.State
+import           Data.Char
 import           Data.List
 import qualified Data.Map.Strict     as M
 import           Data.Maybe
@@ -38,16 +40,42 @@ parseInput input =
 
 -- Problem
 order :: [Dependency] -> String
-order deps = evalState (topSort deps) tsEmpty
+order deps = evalState (topSort deps) (tsEmpty 0)
+
+data Worker
+    = Free
+    | Busy Char
+           Integer
+    deriving (Show)
+
+instance Eq Worker where
+    Free == Free = True
+    (Busy _ a) == (Busy _ b) = a == b
+    _ == _ = False
+
+isFree :: Worker -> Bool
+isFree Free = True
+isFree _    = False
+
+isBusy :: Worker -> Bool
+isBusy = not . isFree
+
+isDone :: Worker -> Bool
+isDone (Busy _ 0) = True
+isDone _          = False
+
+remaining :: Worker -> Integer
+remaining (Busy _ w) = w
 
 data TopSort = TopSort
     { next     :: [Char]
     , incoming :: M.Map Char Integer
     , outgoing :: M.Map Char [Char]
+    , workers  :: [Worker]
     } deriving (Show)
 
-tsEmpty :: TopSort
-tsEmpty = TopSort [] M.empty M.empty
+tsEmpty :: Integer -> TopSort
+tsEmpty workers = TopSort [] M.empty M.empty (Free <$ [1 .. workers])
 
 tsInit :: [Dependency] -> State TopSort ()
 tsInit deps = do
@@ -94,14 +122,19 @@ topSort deps = do
 topSortStep :: State TopSort Char
 topSortStep = do
     n <- popNext
-    next <- popOutgoing n
-    mapM_ subtractIncoming next
+    removeNode n
     return n
   where
     popNext = do
         (n:ns) <- gets next
         modify (\ts@TopSort {..} -> ts {next = ns})
         return n
+
+removeNode :: Char -> State TopSort ()
+removeNode n = do
+    next <- popOutgoing n
+    mapM_ subtractIncoming next
+  where
     popOutgoing n = do
         next <- gets (M.lookup n . outgoing)
         modify (\ts@TopSort {..} -> ts {outgoing = M.delete n outgoing})
@@ -111,7 +144,64 @@ topSortStep = do
         modify (\ts@TopSort {..} -> ts {incoming = M.insert n (c - 1) incoming})
         when (c == 1) $ modify (\ts@TopSort {..} -> ts {next = sort (n : next)})
 
+totalTime :: Integer -> [Dependency] -> Integer
+totalTime workers deps = evalState (topSortTime deps) (tsEmpty workers)
+
+topSortTime :: [Dependency] -> State TopSort Integer
+topSortTime deps = do
+    tsInit deps
+    sum <$> whileM hasNextOrWorking topSortTimeStep
+  where
+    hasNextOrWorking = do
+        ns <- gets next
+        ws <- gets (filter isBusy . workers)
+        return $ not (null ns) || not (null ws)
+
+topSortTimeStep :: State TopSort Integer
+topSortTimeStep = do
+    whileM_ hasNextAndNotWorking assignNext
+    wk <- gets (minimum . map remaining . filter isBusy . workers)
+    doWork wk
+    doneWorkers <- gets (elemIndices (Busy '?' 0) . workers)
+    mapM_ cleanupWorker doneWorkers
+    return wk
+  where
+    hasNextAndNotWorking = do
+        ns <- gets next
+        ws <- gets (filter isFree . workers)
+        return $ not (null ns) && not (null ws)
+    assignNext = do
+        (n:ns) <- gets next
+        modify (\ts@TopSort {..} -> ts {next = ns, workers = assign n workers})
+    assign n ws =
+        case elemIndex Free ws of
+            Just i -> replace (fromIntegral i) (Busy n (duration n)) ws
+    doWork wk = modify (\ts@TopSort {..} -> ts {workers = work wk workers})
+    work :: Integer -> [Worker] -> [Worker]
+    work wk =
+        map
+            (\case
+                 Busy n w -> Busy n (w - wk)
+                 Free -> Free)
+    cleanupWorker i = do
+        (Busy n _) <- gets (flip (!!) i . workers)
+        removeNode n
+        modify
+            (\ts@TopSort {..} ->
+                 ts {workers = replace (fromIntegral i) Free workers})
+
+replace :: Integer -> a -> [a] -> [a]
+replace i v (a:as) =
+    if i == 0
+        then v : as
+        else a : replace (i - 1) v as
+replace _ _ [] = []
+
+duration :: Char -> Integer
+duration c = fromIntegral (ord c - ord 'A' + 61)
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadFile
     print $ order input
+    print $ totalTime 5 input
