@@ -16,6 +16,9 @@ data Tree =
          [Integer]
     deriving (Show)
 
+foldTree :: ([Integer] -> [b] -> b) -> Tree -> b
+foldTree f (Node cs ms) = f ms (foldTree f <$> cs)
+
 node :: Parsec [Integer] () Tree
 node = do
     c <- num
@@ -31,15 +34,17 @@ tree input =
     result = parse node "" input
 
 metadata :: Tree -> Integer
-metadata (Node cs ms) = sum ms + (sum . map metadata $ cs)
+metadata = foldTree f
+  where
+    f ms sums = sum ms + sum sums
 
 value :: Tree -> Integer
-value (Node cs ms) =
-    if null cs
-        then sum ms
-        else sum . map value $ indexedChildren cs ms
+value = foldTree f
   where
-    indexedChildren cs = mapMaybe ((L.!!) cs . pred)
+    f ms values =
+        if null values
+            then sum ms
+            else sum . mapMaybe ((L.!!) values . pred) $ ms
 
 main :: IO ()
 main = do
