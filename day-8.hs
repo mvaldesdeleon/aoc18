@@ -1,11 +1,13 @@
+import qualified Data.List.Safe  as L
+import           Data.Maybe      (mapMaybe)
 import           Text.Parsec     (Parsec, count, parse, tokenPrim)
 import           Text.Parsec.Pos (incSourceColumn)
 
 loadInput :: IO String
 loadInput = readFile "inputs/day-8.txt"
 
-parseInput :: String -> [Integer]
-parseInput = map read . words
+parseInput :: String -> Tree
+parseInput = tree . map read . words
 
 satisfy f =
     tokenPrim
@@ -16,8 +18,8 @@ satisfy f =
                  then Just t
                  else Nothing)
 
-value :: Parsec [Integer] () Integer
-value = satisfy (const True)
+num :: Parsec [Integer] () Integer
+num = satisfy (const True)
 
 data Tree =
     Node [Tree]
@@ -26,9 +28,9 @@ data Tree =
 
 node :: Parsec [Integer] () Tree
 node = do
-    c <- value
-    m <- value
-    Node <$> count (fromIntegral c) node <*> count (fromIntegral m) value
+    c <- num
+    m <- num
+    Node <$> count (fromIntegral c) node <*> count (fromIntegral m) num
 
 tree :: [Integer] -> Tree
 tree input =
@@ -38,7 +40,19 @@ tree input =
   where
     result = parse node "" input
 
+metadata :: Tree -> Integer
+metadata (Node cs ms) = sum ms + (sum . map metadata $ cs)
+
+value :: Tree -> Integer
+value (Node cs ms) =
+    if null cs
+        then sum ms
+        else sum . map value $ indexedChildren cs ms
+  where
+    indexedChildren cs = mapMaybe ((L.!!) cs . pred)
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
-    print $ tree input
+    print $ metadata input
+    print $ value input
