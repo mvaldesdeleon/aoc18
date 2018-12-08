@@ -1,7 +1,6 @@
-import qualified Data.List.Safe  as L
-import           Data.Maybe      (mapMaybe)
-import           Text.Parsec     (Parsec, count, parse, tokenPrim)
-import           Text.Parsec.Pos (incSourceColumn)
+import qualified Data.List.Safe as L
+import           Data.Maybe     (mapMaybe)
+import           Text.Parsec    (Parsec, anyToken, count, parse)
 
 loadInput :: IO String
 loadInput = readFile "inputs/day-8.txt"
@@ -9,17 +8,8 @@ loadInput = readFile "inputs/day-8.txt"
 parseInput :: String -> Tree
 parseInput = tree . map read . words
 
-satisfy f =
-    tokenPrim
-        show
-        (\pos _ _ -> incSourceColumn pos 1)
-        (\t ->
-             if f t
-                 then Just t
-                 else Nothing)
-
 num :: Parsec [Integer] () Integer
-num = satisfy (const True)
+num = anyToken
 
 data Tree =
     Node [Tree]
