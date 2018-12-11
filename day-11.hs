@@ -19,22 +19,43 @@ powerLevel gridSerial (x, y) =
 hundreds :: Integer -> Integer
 hundreds = fromIntegral . digitToInt . fromMaybe '0' . (L.!! 2) . reverse . show
 
-totalPower :: Integer -> (Integer, Integer) -> Integer
-totalPower gridSerial (left, top) =
+totalPower3 :: Integer -> (Integer, Integer) -> Integer
+totalPower3 gridSerial (left, top) =
     sum . map (powerLevel gridSerial) $ positions
   where
     positions = [(x, y) | x <- [left .. left + 2], y <- [top .. top + 2]]
 
-maxTotalPower :: Integer -> (Integer, Integer)
-maxTotalPower gridSerial = snd . maximumBy (compare `on` fst) $ options
+maxTotalPower3 :: Integer -> (Integer, Integer)
+maxTotalPower3 gridSerial = snd . maximumBy (compare `on` fst) $ options
   where
     options =
-        [ (totalPower gridSerial (x, y), (x, y))
+        [ (totalPower3 gridSerial (x, y), (x, y))
         | x <- [1 .. 300]
         , y <- [1 .. 300]
         ]
 
+maxTotalPower :: Integer -> (Integer, Integer, Integer)
+maxTotalPower gridSerial = snd . maximumBy (compare `on` fst) $ options
+  where
+    options =
+        [ totalPower z (x, y)
+        | z <- [1 .. 300]
+        , x <- [1 .. 301 - z]
+        , y <- [1 .. 301 - z]
+        ]
+    grid = [[powerLevel gridSerial (x, y) | y <- [1 .. 300]] | x <- [1 .. 300]]
+    sumRows = map (scanl (+) 0)
+    sumColumns = scanl (zipWith (+)) (replicate 301 0)
+    sumGrid = sumColumns . sumRows $ grid
+    totalPower z (x, y) =
+        ( (sumGrid !! (x + z - 1) !! (y + z - 1)) -
+          (sumGrid !! (x - 1) !! (y + z - 1)) -
+          (sumGrid !! (x + z - 1) !! (y - 1)) +
+          (sumGrid !! (x - 1) !! (y - 1))
+        , (fromIntegral x, fromIntegral y, fromIntegral z))
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
+    print $ maxTotalPower3 input
     print $ maxTotalPower input
