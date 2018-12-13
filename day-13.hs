@@ -1,11 +1,13 @@
 {-# LANGUAGE LambdaCase      #-}
 {-# LANGUAGE RecordWildCards #-}
 
-import           Control.Applicative
-import           Data.Function
-import           Data.List
+import           Control.Applicative ((<|>))
+import           Control.Concurrent  (threadDelay)
+import           Data.Function       (on)
+import           Data.List           (elem, elemIndex, find, genericLength,
+                                      sort)
 import qualified Data.Map.Strict     as M
-import           Data.Maybe
+import           Data.Maybe          (fromMaybe, mapMaybe)
 
 loadInput :: IO String
 loadInput = readFile "inputs/day-13.txt"
@@ -150,16 +152,19 @@ data Mine = Mine
     , mSize   :: Size
     }
 
+render :: Position -> Size -> Mine -> String
+render (Position (left, top)) (Size (width, height)) Mine {..} =
+    unlines . map row $ [top .. top + height - 1]
+  where
+    row y = [char $ Position (x, y) | x <- [left .. left + width - 1]]
+    char p = fromMaybe ' ' (maybeCart p <|> maybeTrack p)
+    maybeCart p =
+        cartToChar <$>
+        find ((== p) . cPosition) (filter (not . isRemoved) mCarts)
+    maybeTrack p = trackToChar <$> M.lookup p mTracks
+
 instance Show Mine where
-    show Mine {..} = unlines . map row $ [0 .. height - 1]
-      where
-        Size (width, height) = mSize
-        row y = [char $ Position (x, y) | x <- [0 .. width - 1]]
-        char p = fromMaybe ' ' (maybeCart p <|> maybeTrack p)
-        maybeCart p =
-            cartToChar <$>
-            find ((== p) . cPosition) (filter (not . isRemoved) mCarts)
-        maybeTrack p = trackToChar <$> M.lookup p mTracks
+    show m@Mine {..} = render (Position (0, 0)) mSize m
 
 mapSnd :: (a -> b) -> (c, a) -> (c, b)
 mapSnd f (c, a) = (c, f a)
@@ -282,8 +287,22 @@ iterateEither f b =
         Left a  -> a
         Right b -> iterateEither f b
 
+itergregateEither :: (b -> Either a b) -> b -> [b]
+itergregateEither f b = go f b []
+  where
+    go f b res =
+        case f b of
+            Left a   -> reverse (b : res)
+            Right nb -> go f nb (b : res)
+
+frame :: Mine -> IO ()
+frame m = do
+    putStrLn $ render (Position (00, 00)) (Size (150, 150)) m
+    threadDelay 300000
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
+    -- frame `mapM_` itergregateEither tick input
     print $ iterateEither tick input
     print $ iterateEither tick' input
