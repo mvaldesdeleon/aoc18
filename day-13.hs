@@ -112,11 +112,18 @@ change dc d =
             GoLeft -> GoUp
             GoRight -> GoDown
 
-data Cart = Cart
-    { cPosition         :: Position
-    , cDirection        :: Direction
-    , cNextIntersection :: DirectionChange
-    } deriving (Show)
+data Cart
+    = Removed
+    | Cart { cPosition         :: Position
+           , cDirection        :: Direction
+           , cNextIntersection :: DirectionChange }
+    deriving (Show)
+
+isRemoved :: Cart -> Bool
+isRemoved =
+    \case
+        Removed -> True
+        _ -> False
 
 cartToChar :: Cart -> Char
 cartToChar Cart {..} =
@@ -127,10 +134,13 @@ cartToChar Cart {..} =
         GoRight -> '>'
 
 instance Eq Cart where
-    (==) = (==) `on` cPosition
+    Cart pa _ _ == Cart pb _ _ = pa == pb
+    _ == _ = False
 
 instance Ord Cart where
-    (<=) = (<=) `on` cPosition
+    Cart pa _ _ <= Cart pb _ _ = pa <= pb
+    Cart {} <= Removed = False
+    _ <= _ = True
 
 type Tracks = M.Map Position Track
 
@@ -146,7 +156,9 @@ instance Show Mine where
         Size (width, height) = mSize
         row y = [char $ Position (x, y) | x <- [0 .. width - 1]]
         char p = fromMaybe ' ' (maybeCart p <|> maybeTrack p)
-        maybeCart p = cartToChar <$> find ((== p) . cPosition) mCarts
+        maybeCart p =
+            cartToChar <$>
+            find ((== p) . cPosition) (filter (not . isRemoved) mCarts)
         maybeTrack p = trackToChar <$> M.lookup p mTracks
 
 mapSnd :: (a -> b) -> (c, a) -> (c, b)
@@ -199,7 +211,36 @@ tick m@Mine {..} =
         collision = newCart `elem` mCarts
     updateCart m@Mine {..} i c = m {mCarts = replace i c mCarts}
 
+tick' :: Mine -> Either Position Mine
+tick' m@Mine {..} =
+    sortCarts <$> foldl subTick (Right m) [0 .. genericLength mCarts - 1]
+  where
+    sortCarts m@Mine {..} = m {mCarts = sort mCarts}
+    subTick e i =
+        case e of
+            Left p  -> Left p
+            Right m -> doSubTick m i
+    doSubTick m@Mine {..} i
+        | lastCart = Left $ cPosition (head . filter (not . isRemoved) $ mCarts)
+        | isRemoved cart = Right m
+        | collision = Right $ removeCarts m i j
+        | otherwise = Right $ updateCart m i newCart
+      where
+        lastCart = (==) 1 . length . filter (not . isRemoved) $ mCarts
+        cart = mCarts !! fromIntegral i
+        newCart = advanceCart m cart
+        collision = newCart `elem` mCarts
+        j =
+            maybe
+                (error "This will never happen")
+                fromIntegral
+                (newCart `elemIndex` mCarts)
+    updateCart m@Mine {..} i c = m {mCarts = replace i c mCarts}
+    removeCarts m@Mine {..} i j =
+        m {mCarts = replace i Removed . replace j Removed $ mCarts}
+
 advanceCart :: Mine -> Cart -> Cart
+advanceCart _ Removed = Removed
 advanceCart Mine {..} c@Cart {..} =
     c
     { cPosition = newPosition
@@ -245,3 +286,4 @@ main :: IO ()
 main = do
     input <- parseInput <$> loadInput
     print $ iterateEither tick input
+    print $ iterateEither tick' input
