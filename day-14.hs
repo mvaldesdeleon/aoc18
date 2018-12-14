@@ -3,7 +3,7 @@
 import           Control.Monad       (replicateM_)
 import           Control.Monad.Loops (iterateUntil)
 import           Control.Monad.State (State, execState, gets, modify)
-import           Data.Char           (intToDigit)
+import           Data.Char           (digitToInt, intToDigit)
 import qualified Data.Map.Strict     as M
 
 loadInput :: IO String
@@ -49,9 +49,8 @@ insert newScores scores =
 advance :: Integer -> Scores -> Integer
 advance i scores = (1 + i + scores M.! i) `mod` fromIntegral (M.size scores)
 
-digits :: Integral x => x -> [x]
-digits 0 = []
-digits x = digits (x `div` 10) ++ [x `mod` 10]
+digits :: Integer -> [Integer]
+digits = map (fromIntegral . digitToInt) . show
 
 brewUntil :: Integer -> State Recipes Integer
 brewUntil count = iterateUntil (>= count) make
