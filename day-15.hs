@@ -7,20 +7,31 @@
 import           Control.Lens        (Getting, Sequenced, allOf, filtered,
                                       forMOf_, makeLenses, modifying, toListOf,
                                       views)
-import           Control.Monad       (forM, join, when)
-import           Control.Monad.Loops (untilM)
-import           Control.Monad.State (MonadState, State, get, gets, runState)
+import           Control.Monad       (forM, join, replicateM_, when)
+import           Control.Monad.Loops (untilM, whileM_)
+import           Control.Monad.State (MonadState, State, execState, get, gets,
+                                      modify, runState)
 import           Data.Function       (on)
 import           Data.List           (find, genericLength, notElem, sort,
                                       sortOn)
 import qualified Data.List.Safe      as L
 import qualified Data.Map.Strict     as M
 import           Data.Maybe          (fromMaybe, mapMaybe)
-import           Data.Tuple          (swap)
+import           Data.Tuple          (fst, swap)
+
+import           Debug.Trace
+
+tt s x = trace (s ++ show x) x
+
+t x = trace (show x) x
 
 -- LOAD INPUT
 loadInput :: IO String
-loadInput = readFile "inputs/day-15.txt"
+loadInput = readFile "inputs/day-15b.txt"
+
+-- GENERAL HELPERS
+mapSnd :: (a -> b) -> (c, a) -> (c, b)
+mapSnd f (c, a) = (c, f a)
 
 -- TYPES AND RELATED FUNCTIONS
 -- ELEMENTAL TYPES
@@ -40,6 +51,11 @@ instance Ord Position where
 
 adjacents :: Position -> [Position]
 adjacents p = [move GoUp, move GoLeft, move GoRight, move GoDown] <*> [p]
+
+adjacentsD :: Position -> [(Position, Direction)]
+adjacentsD p =
+    zip ([move GoUp, move GoLeft, move GoRight, move GoDown] <*> [p])
+        [GoUp, GoLeft, GoRight, GoDown]
 
 data Direction
     = GoUp
@@ -139,6 +155,11 @@ instance Show Config where
         caveTileAt p = caveTileToChar (_cave M.! p)
 
 -- FLOOD FILL
+data FFState = FFState
+    { ffNext   :: [(Position, FFResult)]
+    , ffResult :: FloodFill
+    } deriving (Show)
+
 data FFResult = FFResult
     { distance           :: Integer
     , firstStepDirection :: Direction
@@ -147,13 +168,38 @@ data FFResult = FFResult
 type FloodFill = M.Map Position FFResult
 
 floodFill :: Cave -> Position -> FloodFill
--- new approach, state monad to build the FF state using a stack of positions to visit
--- each stack entry has a position and a FFResult
--- the initial step is to get the empty adjacent positions p and pop them into the stack
--- then while the stack is not empty,
---      pop from stack, add to FF, push its emtpy adjacent positions into the stack, updating dist
--- extract FF at the end
-floodFill c p = undefined
+floodFill c p =
+    ffResult $
+    execState
+        (do initNext
+            whileM_ hasNext floodFillStep)
+        (FFState [] M.empty)
+  where
+    initNext :: State FFState ()
+    initNext = do
+        let initials =
+                map (mapSnd (FFResult 1)) . filter (isEmpty c . fst) $
+                adjacentsD p
+        modify (\ffs@FFState {..} -> ffs {ffNext = initials})
+    hasNext :: State FFState Bool
+    hasNext = gets ((> 0) . genericLength . ffNext)
+    floodFillStep :: State FFState ()
+    floodFillStep = do
+        ((p, res):rest) <- gets ffNext -- pop next
+        modify (\ffs@FFState {..} -> ffs {ffNext = rest})
+        modify -- update result
+            (\ffs@FFState {..} -> ffs {ffResult = M.insert p res ffResult})
+        -- add new to stack
+        ff <- gets ffResult
+        let new =
+                zip
+                    (filter (not . visited ff) . filter (isEmpty c) $
+                     adjacents p)
+                    (repeat $ next res)
+        modify (\ffs@FFState {..} -> ffs {ffNext = ffNext ++ new})
+      where
+        next ffr@FFResult {..} = ffr {distance = distance + 1}
+        visited ff p = p `M.member` ff
 
 -- LENSES
 makeLenses ''Unit
@@ -162,10 +208,6 @@ makeLenses ''Config
 
 forEach_ :: MonadState s m => Getting (Sequenced r m) s a -> (a -> m r) -> m ()
 forEach_ gs f = get >>= \s -> forMOf_ gs s f
-
--- GENERAL HELPERS
-mapSnd :: (a -> b) -> (c, a) -> (c, b)
-mapSnd f (c, a) = (c, f a)
 
 -- SPECIFIC CODE
 parseCave :: Size -> String -> Cave
@@ -208,7 +250,7 @@ unitTurn unit =
 unitMove :: Unit -> State Config ()
 unitMove Unit {..} = do
     targets <- getTargets _unitType
-    positions <- join <$> targets `forM` rangePositions
+    positions <- join <$> targets `forM` rangePositions _pos
     when (_pos `notElem` positions) $ do
         ff <- measureFrom _pos
         case L.head . sort . mapMaybe (`M.lookup` ff) $ positions of
@@ -218,10 +260,10 @@ unitMove Unit {..} = do
     getTargets :: UnitType -> State Config [Unit]
     getTargets t =
         gets $ toListOf (units . traverse . filtered (isOfType $ targetOf t))
-    rangePositions :: Unit -> State Config [Position]
-    rangePositions Unit {..} = do
+    rangePositions :: Position -> Unit -> State Config [Position]
+    rangePositions p Unit {..} = do
         cave <- gets (\Config {..} -> medusa (filter isAlive _units) _cave)
-        return $ filter (isEmpty cave) (adjacents _pos)
+        return $ filter (isEmpty $ M.insert p Empty cave) (adjacents _pos)
     measureFrom :: Position -> State Config FloodFill
     measureFrom p = do
         cave <- gets (\Config {..} -> medusa (filter isAlive _units) _cave)
@@ -236,7 +278,7 @@ unitAttack :: Unit -> State Config ()
 -- identify targets in range
 -- sort by HP and then by position (reading order)
 -- pick the first, if any and reduce its HP by 3
-unitAttack = undefined
+unitAttack Unit {..} = return ()
 
 combatOver :: State Config Bool
 combatOver = (||) <$> allDead Goblin <*> allDead Elf
@@ -256,7 +298,11 @@ scoreCombat (cfg, rounds) = rounds * totalHitPoints cfg
 outcome :: Config -> Integer
 outcome = scoreCombat . simulate
 
+testRounds :: Integer -> Config -> Config
+testRounds n = execState (replicateM_ (fromIntegral n) combatRound)
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
-    print $ outcome input
+    print $ testRounds 1 input
+    -- print $ outcome input
