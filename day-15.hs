@@ -1,14 +1,19 @@
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TemplateHaskell       #-}
 
 import           Control.Lens        (Getting, Sequenced, allOf, filtered,
-                                      forMOf_, makeLenses, modifying, toListOf)
-import           Control.Monad       (forM_, when)
+                                      forMOf_, makeLenses, modifying, toListOf,
+                                      views)
+import           Control.Monad       (forM, join, when)
 import           Control.Monad.Loops (untilM)
 import           Control.Monad.State (MonadState, State, get, gets, runState)
-import           Data.List           (find, genericLength, sortOn)
+import           Data.Function       (on)
+import           Data.List           (find, genericLength, notElem, sort,
+                                      sortOn)
+import qualified Data.List.Safe      as L
 import qualified Data.Map.Strict     as M
 import           Data.Maybe          (fromMaybe, mapMaybe)
 import           Data.Tuple          (swap)
@@ -18,6 +23,7 @@ loadInput :: IO String
 loadInput = readFile "inputs/day-15.txt"
 
 -- TYPES AND RELATED FUNCTIONS
+-- ELEMENTAL TYPES
 newtype Size =
     Size (Integer, Integer)
     deriving (Eq, Show)
@@ -32,6 +38,25 @@ instance Ord Position where
             then y0 <= y1
             else x0 <= x1
 
+adjacents :: Position -> [Position]
+adjacents p = [move GoUp, move GoLeft, move GoRight, move GoDown] <*> [p]
+
+data Direction
+    = GoUp
+    | GoLeft
+    | GoRight
+    | GoDown
+    deriving (Show, Eq, Ord)
+
+move :: Direction -> Position -> Position
+move d (Position (x, y)) =
+    case d of
+        GoUp    -> Position (x, y - 1)
+        GoLeft  -> Position (x - 1, y)
+        GoRight -> Position (x + 1, y)
+        GoDown  -> Position (x, y + 1)
+
+-- CAVE TILE
 data CaveTile
     = Empty
     | Wall
@@ -51,18 +76,34 @@ caveTileToChar =
         Empty -> '.'
         Wall -> '#'
 
+-- CAVE
 type Cave = M.Map Position CaveTile
 
+isEmpty :: Cave -> Position -> Bool
+isEmpty c p = M.findWithDefault Wall p c == Empty
+
+-- UNIT TYPE
 data UnitType
     = Goblin
     | Elf
     deriving (Show, Eq)
 
+targetOf :: UnitType -> UnitType
+targetOf =
+    \case
+        Goblin -> Elf
+        Elf -> Goblin
+
+-- UNIT
 data Unit = Unit
-    { _unitType  :: UnitType
+    { _unitId    :: String
+    , _unitType  :: UnitType
     , _pos       :: Position
     , _hitPoints :: Integer
     } deriving (Show)
+
+instance Eq Unit where
+    (==) = (==) `on` _unitId
 
 isAlive :: Unit -> Bool
 isAlive Unit {..} = _hitPoints > 0
@@ -76,6 +117,12 @@ unitToChar Unit {..} =
 isOfType :: UnitType -> Unit -> Bool
 isOfType t Unit {..} = _unitType == t
 
+-- Turns Units into Walls and adds them to the existing Cave
+-- Good for calculating range and movement
+medusa :: [Unit] -> Cave -> Cave
+medusa us = M.union $ M.fromList [(_pos u, Wall) | u <- us]
+
+-- CONFIG
 data Config = Config
     { _cave  :: Cave
     , _units :: [Unit]
@@ -91,6 +138,23 @@ instance Show Config where
         unitAt p = unitToChar <$> find ((== p) . _pos) (filter isAlive _units)
         caveTileAt p = caveTileToChar (_cave M.! p)
 
+-- FLOOD FILL
+data FFResult = FFResult
+    { distance           :: Integer
+    , firstStepDirection :: Direction
+    } deriving (Show, Eq, Ord)
+
+type FloodFill = M.Map Position FFResult
+
+floodFill :: Cave -> Position -> FloodFill
+-- new approach, state monad to build the FF state using a stack of positions to visit
+-- each stack entry has a position and a FFResult
+-- the initial step is to get the empty adjacent positions p and pop them into the stack
+-- then while the stack is not empty,
+--      pop from stack, add to FF, push its emtpy adjacent positions into the stack, updating dist
+-- extract FF at the end
+floodFill c p = undefined
+
 -- LENSES
 makeLenses ''Unit
 
@@ -99,7 +163,7 @@ makeLenses ''Config
 forEach_ :: MonadState s m => Getting (Sequenced r m) s a -> (a -> m r) -> m ()
 forEach_ gs f = get >>= \s -> forMOf_ gs s f
 
--- GENERAL GELPERS
+-- GENERAL HELPERS
 mapSnd :: (a -> b) -> (c, a) -> (c, b)
 mapSnd f (c, a) = (c, f a)
 
@@ -112,8 +176,8 @@ parseUnits size = mapMaybe pairToUnit . addPosition size
   where
     pairToUnit (p, c) =
         case c of
-            'G' -> Just $ Unit Goblin p 200
-            'E' -> Just $ Unit Elf p 200
+            'G' -> Just $ Unit (show p) Goblin p 200
+            'E' -> Just $ Unit (show p) Elf p 200
             _   -> Nothing
 
 addPosition :: Size -> String -> [(Position, Char)]
@@ -142,21 +206,31 @@ unitTurn unit =
         unitAttack unit
 
 unitMove :: Unit -> State Config ()
--- identify targets
--- identify all open squares in range (OSIR) of target
--- check if already in range of target
--- flood-fill measuring distance from position of unit to all OSIRs
---    each square hold a Maybe (distance, directionFirtStep)
---      when a square is reached multiple times we keep the best distance
---      and if the distance is tied, the best directionFirstStep by reading order
---    we also need to keep the backtracking matrix...
---       actually, all we really need to know is the FIRST step taken,
---       so theres no need to actually backtrack, just propagate this value
---    use comibined map with positions of all alive units
--- remove all values with no distance (unreachable)
--- sort them by distance and then by position (reading order)
--- pick the first, if any and take the step indicated
-unitMove = undefined
+unitMove Unit {..} = do
+    targets <- getTargets _unitType
+    positions <- join <$> targets `forM` rangePositions
+    when (_pos `notElem` positions) $ do
+        ff <- measureFrom _pos
+        case L.head . sort . mapMaybe (`M.lookup` ff) $ positions of
+            Just FFResult {..} -> moveUnit _unitId firstStepDirection
+            Nothing            -> return ()
+  where
+    getTargets :: UnitType -> State Config [Unit]
+    getTargets t =
+        gets $ toListOf (units . traverse . filtered (isOfType $ targetOf t))
+    rangePositions :: Unit -> State Config [Position]
+    rangePositions Unit {..} = do
+        cave <- gets (\Config {..} -> medusa (filter isAlive _units) _cave)
+        return $ filter (isEmpty cave) (adjacents _pos)
+    measureFrom :: Position -> State Config FloodFill
+    measureFrom p = do
+        cave <- gets (\Config {..} -> medusa (filter isAlive _units) _cave)
+        return $ floodFill cave p
+    moveUnit :: String -> Direction -> State Config ()
+    moveUnit id d =
+        modifying
+            (units . traverse . filtered (views unitId (== id)) . pos)
+            (move d)
 
 unitAttack :: Unit -> State Config ()
 -- identify targets in range
