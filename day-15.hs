@@ -1,12 +1,13 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE TemplateHaskell       #-}
 
 import           Control.Concurrent  (threadDelay)
 import           Control.Lens        (allOf, filtered, makeLenses, modifying,
-                                      toListOf, views)
+                                      set, toListOf, views)
 import           Control.Monad       (forM, join, replicateM, when)
 import           Control.Monad.Loops (untilM, whileM_)
 import           Control.Monad.State (State, evalState, execState, get, gets,
@@ -161,6 +162,7 @@ data Config = Config
     { _cave  :: Cave
     , _units :: [Unit]
     , _size  :: Size
+    , _elfAP :: Integer
     }
 
 instance Show Config where
@@ -247,7 +249,7 @@ addPosition (Size (width, height)) =
     zip [Position (x, y) | y <- [0 .. height - 1], x <- [0 .. width - 1]]
 
 parseInput :: String -> Config
-parseInput input = Config (parseCave size clean) (parseUnits size clean) size
+parseInput input = Config (parseCave size clean) (parseUnits size clean) size 3
   where
     size = Size (width, height)
     width = genericLength . (!! 0) . lines $ input
@@ -330,16 +332,21 @@ unitAttack id = do
              traverse .
              filtered ((&&) <$> (isOfType . targetOf $ _unitType) <*> isAlive))
     case L.head . sort . mapMaybe (unitAt units) . adjacents $ _pos of
-        Just Unit {..} -> takeDamage _unitId
-        Nothing        -> return ()
+        Just Unit {_unitId} -> takeDamage _unitType _unitId
+        Nothing             -> return ()
   where
     unitAt :: [Unit] -> Position -> Maybe Unit
     unitAt us p = find ((==) p . _pos) us
-    takeDamage :: String -> State Config ()
-    takeDamage id =
+    takeDamage :: UnitType -> String -> State Config ()
+    takeDamage fromType id = do
+        elfAP <- gets _elfAP
+        let damage =
+                if fromType == Elf
+                    then elfAP
+                    else 3
         modifying
             (units . traverse . filtered (views unitId (== id)) . hitPoints)
-            (subtract 3)
+            (subtract damage)
 
 combatOver :: State Config Bool
 combatOver = (||) <$> allDead Goblin <*> allDead Elf
@@ -362,8 +369,24 @@ scoreCombat (cfg, rounds) = rounds * totalHitPoints cfg
 outcome :: Config -> Integer
 outcome = scoreCombat . simulate
 
+scoreCombat' :: (Config, Integer) -> (Bool, Integer)
+scoreCombat' (cfg, rounds) = (allAlive Elf, rounds * totalHitPoints cfg)
+  where
+    totalHitPoints =
+        sum . toListOf (units . traverse . filtered isAlive . hitPoints)
+    allAlive t = allOf (units . traverse . filtered (isOfType t)) isAlive cfg
+
+outcome' :: Config -> (Bool, Integer)
+outcome' = scoreCombat' . simulate
+
 testRounds :: Integer -> Config -> Config
 testRounds n = execState (replicateM (fromIntegral n) combatRound)
+
+searchOutcome :: Config -> Integer
+searchOutcome cfg = snd . head . dropWhile (not . fst) $ outcomes
+  where
+    configs = set elfAP <$> [4 ..] <*> [cfg]
+    outcomes = outcome' <$> configs
 
 render :: FloodFill -> Config -> String
 render ff Config {..} = unlines . map row $ [0 .. height - 1]
@@ -399,6 +422,7 @@ main = do
     -- putStrLn $ render ff input
     -- print $ testRounds 5 input
     print $ outcome input
+    print $ searchOutcome input
     -- print $ sortOn _pos . _units $ input
     -- let i = 81
     -- let combat = testRounds (fromIntegral i) input
