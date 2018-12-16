@@ -168,7 +168,6 @@ combatOver :: State Config Bool
 combatOver = (||) <$> allDead Goblin <*> allDead Elf
   where
     allDead :: UnitType -> State Config Bool
-    -- maybe refactor to "uses" later on ?
     allDead t =
         gets $ allOf (units . traverse . filtered (isOfType t)) (not . isAlive)
 
@@ -176,9 +175,9 @@ simulate :: Config -> (Config, Integer)
 simulate = swap . runState (genericLength <$> (combatRound `untilM` combatOver))
 
 scoreCombat :: (Config, Integer) -> Integer
-scoreCombat (cfg, rounds) = rounds * totalHP cfg
+scoreCombat (cfg, rounds) = rounds * totalHitPoints cfg
   where
-    totalHP = sum . toListOf (units . traverse . hitPoints)
+    totalHitPoints = sum . toListOf (units . traverse . hitPoints)
 
 outcome :: Config -> Integer
 outcome = scoreCombat . simulate
