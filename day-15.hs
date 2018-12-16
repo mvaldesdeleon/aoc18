@@ -5,13 +5,12 @@
 {-# LANGUAGE TemplateHaskell       #-}
 
 import           Control.Concurrent  (threadDelay)
-import           Control.Lens        (Getting, Sequenced, allOf, filtered,
-                                      forMOf_, makeLenses, modifying, toListOf,
-                                      views)
+import           Control.Lens        (allOf, filtered, makeLenses, modifying,
+                                      toListOf, views)
 import           Control.Monad       (forM, join, replicateM, when)
 import           Control.Monad.Loops (untilM, whileM_)
-import           Control.Monad.State (MonadState, State, evalState, execState,
-                                      get, gets, modify, runState)
+import           Control.Monad.State (State, evalState, execState, get, gets,
+                                      modify, runState)
 import           Data.Char           (intToDigit)
 import           Data.Function       (on)
 import           Data.List           (find, genericLength, notElem, nub, sort,
@@ -23,7 +22,7 @@ import           Data.Tuple          (fst, swap)
 
 -- LOAD INPUT
 loadInput :: IO String
-loadInput = readFile "inputs/day-15c.txt"
+loadInput = readFile "inputs/day-15.txt"
 
 -- GENERAL HELPERS
 mapSnd :: (a -> b) -> (c, a) -> (c, b)
@@ -182,7 +181,10 @@ data FFState = FFState
 data FFResult = FFResult
     { distance           :: Integer
     , firstStepDirection :: Direction
-    } deriving (Show, Eq, Ord)
+    } deriving (Show, Eq)
+
+instance Ord FFResult where
+    (<=) = (<=) `on` distance
 
 type FloodFill = M.Map Position FFResult
 
@@ -191,7 +193,6 @@ floodFill c p =
     ffResult $
     execState
         (do initNext
-            -- replicateM_ 5 floodFillStep)
             whileM_ hasNext floodFillStep)
         (FFState [] M.empty)
   where
@@ -228,9 +229,6 @@ makeLenses ''Unit
 
 makeLenses ''Config
 
-forEach_ :: MonadState s m => Getting (Sequenced r m) s a -> (a -> m r) -> m ()
-forEach_ gs f = get >>= \s -> forMOf_ gs s f
-
 -- SPECIFIC CODE
 parseCave :: Size -> String -> Cave
 parseCave size = M.fromList . map (mapSnd charToCaveTile) . addPosition size
@@ -256,35 +254,47 @@ parseInput input = Config (parseCave size clean) (parseUnits size clean) size
     height = genericLength . lines $ input
     clean = filter (/= '\n') input
 
-combatRound :: State Config Config
+combatRound :: State Config Bool
 combatRound = do
     sortUnits
-    forEach_ (units . traverse . unitId) unitTurn
-    get
+    unitIds <- gets $ toListOf (units . traverse . unitId)
+    or <$> unitIds `forM` unitTurn
   where
     sortUnits = modifying units (sortOn _pos)
 
-unitTurn :: UnitId -> State Config ()
+unitTurn :: UnitId -> State Config Bool
 unitTurn id = do
     unit <-
         gets $
         head . toListOf (units . traverse . filtered (views unitId (== id)))
-    when (isAlive unit) $ do
-        unitMove id
-        unitAttack id
+    if isAlive unit
+        then do
+            combatOver <- unitMove id
+            unitAttack id
+            return combatOver
+        else return False
 
-unitMove :: UnitId -> State Config ()
+unitMove :: UnitId -> State Config Bool
 unitMove id = do
     Unit {..} <-
         gets $
         head . toListOf (units . traverse . filtered (views unitId (== id)))
     targets <- getTargets _unitType
-    positions <- nub . sort . join <$> targets `forM` rangePositions _pos
-    when (_pos `notElem` positions) $ do
-        ff <- measureFrom _pos
-        case L.head . sort . mapMaybe (`M.lookup` ff) $ positions of
-            Just FFResult {..} -> moveUnit _unitId firstStepDirection
-            Nothing            -> return ()
+    if genericLength targets == 0
+        -- No targets, the combat is over
+        then return True
+        else do
+            positions <-
+                nub . sort . join <$> targets `forM` rangePositions _pos
+            when (_pos `notElem` positions) $ do
+                ff <- measureFrom _pos
+                case L.head .
+                     map fst .
+                     sort . mapMaybe (\p -> (,) <$> p `M.lookup` ff <*> Just p) $
+                     positions of
+                    Just FFResult {..} -> moveUnit _unitId firstStepDirection
+                    Nothing            -> return ()
+            return False
   where
     getTargets :: UnitType -> State Config [Unit]
     getTargets t =
@@ -339,7 +349,9 @@ combatOver = (||) <$> allDead Goblin <*> allDead Elf
         gets $ allOf (units . traverse . filtered (isOfType t)) (not . isAlive)
 
 simulate :: Config -> (Config, Integer)
-simulate = swap . runState (genericLength <$> (combatRound `untilM` combatOver))
+simulate =
+    swap .
+    runState (genericLength . filter not <$> (combatRound `untilM` combatOver))
 
 scoreCombat :: (Config, Integer) -> Integer
 scoreCombat (cfg, rounds) = rounds * totalHitPoints cfg
@@ -350,8 +362,8 @@ scoreCombat (cfg, rounds) = rounds * totalHitPoints cfg
 outcome :: Config -> Integer
 outcome = scoreCombat . simulate
 
-testRounds :: Integer -> Config -> [Config]
-testRounds n = evalState (replicateM (fromIntegral n) combatRound)
+testRounds :: Integer -> Config -> Config
+testRounds n = execState (replicateM (fromIntegral n) combatRound)
 
 render :: FloodFill -> Config -> String
 render ff Config {..} = unlines . map row $ [0 .. height - 1]
@@ -387,9 +399,11 @@ main = do
     -- putStrLn $ render ff input
     -- print $ testRounds 5 input
     print $ outcome input
-    print $ sortOn _pos . _units $ input
-    let i = 47
-    let combat = testRounds (fromIntegral i) input
+    -- print $ sortOn _pos . _units $ input
+    -- let i = 81
+    -- let combat = testRounds (fromIntegral i) input
     -- frame `mapM_` combat
-    print $ combat !! (i - 1)
-    print $ sortOn _pos . _units $ combat !! (i - 1)
+    -- print $ combat
+    -- print $ sortOn _pos . _units $ combat
+    -- print $
+    --     sum $ toListOf (units . traverse . filtered isAlive . hitPoints) combat
