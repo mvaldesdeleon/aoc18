@@ -23,7 +23,7 @@ import           Data.Tuple          (fst, swap)
 
 -- LOAD INPUT
 loadInput :: IO String
-loadInput = readFile "inputs/day-15d.txt"
+loadInput = readFile "inputs/day-15c.txt"
 
 -- GENERAL HELPERS
 mapSnd :: (a -> b) -> (c, a) -> (c, b)
@@ -115,8 +115,10 @@ targetOf =
         Elf -> Goblin
 
 -- UNIT
+type UnitId = String
+
 data Unit = Unit
-    { _unitId    :: String
+    { _unitId    :: UnitId
     , _unitType  :: UnitType
     , _pos       :: Position
     , _hitPoints :: Integer
@@ -257,19 +259,25 @@ parseInput input = Config (parseCave size clean) (parseUnits size clean) size
 combatRound :: State Config Config
 combatRound = do
     sortUnits
-    forEach_ (units . traverse) unitTurn
+    forEach_ (units . traverse . unitId) unitTurn
     get
   where
     sortUnits = modifying units (sortOn _pos)
 
-unitTurn :: Unit -> State Config ()
-unitTurn unit =
+unitTurn :: UnitId -> State Config ()
+unitTurn id = do
+    unit <-
+        gets $
+        head . toListOf (units . traverse . filtered (views unitId (== id)))
     when (isAlive unit) $ do
-        unitMove unit
-        unitAttack unit
+        unitMove id
+        unitAttack id
 
-unitMove :: Unit -> State Config ()
-unitMove Unit {..} = do
+unitMove :: UnitId -> State Config ()
+unitMove id = do
+    Unit {..} <-
+        gets $
+        head . toListOf (units . traverse . filtered (views unitId (== id)))
     targets <- getTargets _unitType
     positions <- nub . sort . join <$> targets `forM` rangePositions _pos
     when (_pos `notElem` positions) $ do
@@ -300,16 +308,18 @@ unitMove Unit {..} = do
             (units . traverse . filtered (views unitId (== id)) . pos)
             (move d)
 
-unitAttack :: Unit -> State Config ()
-unitAttack u = do
+unitAttack :: UnitId -> State Config ()
+unitAttack id = do
+    Unit {..} <-
+        gets $
+        head . toListOf (units . traverse . filtered (views unitId (== id)))
     units <-
         gets $
         toListOf
             (units .
              traverse .
-             filtered
-                 ((&&) <$> (isOfType . targetOf . _unitType $ u) <*> isAlive))
-    case L.head . sort . mapMaybe (unitAt units) . adjacents $ _pos u of
+             filtered ((&&) <$> (isOfType . targetOf $ _unitType) <*> isAlive))
+    case L.head . sort . mapMaybe (unitAt units) . adjacents $ _pos of
         Just Unit {..} -> takeDamage _unitId
         Nothing        -> return ()
   where
@@ -334,7 +344,8 @@ simulate = swap . runState (genericLength <$> (combatRound `untilM` combatOver))
 scoreCombat :: (Config, Integer) -> Integer
 scoreCombat (cfg, rounds) = rounds * totalHitPoints cfg
   where
-    totalHitPoints = sum . toListOf (units . traverse . hitPoints)
+    totalHitPoints =
+        sum . toListOf (units . traverse . filtered isAlive . hitPoints)
 
 outcome :: Config -> Integer
 outcome = scoreCombat . simulate
@@ -376,8 +387,9 @@ main = do
     -- putStrLn $ render ff input
     -- print $ testRounds 5 input
     print $ outcome input
-    let i = 50
-    let combat = testRounds (fromIntegral i + 1) input
+    print $ sortOn _pos . _units $ input
+    let i = 47
+    let combat = testRounds (fromIntegral i) input
     -- frame `mapM_` combat
-    print $ combat !! i
-    print $ sortOn _pos . _units $ combat !! i
+    print $ combat !! (i - 1)
+    print $ sortOn _pos . _units $ combat !! (i - 1)
