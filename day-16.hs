@@ -2,14 +2,38 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 import           Control.Lens
-import           Data.Bits    ((.&.), (.|.))
-import           Data.List    (genericLength)
-import           Data.Maybe   (fromMaybe)
-import           Text.Parsec
+import           Control.Monad   (join)
+import           Data.Bits       ((.&.), (.|.))
+import           Data.List       (genericLength, nub, sort, (\\))
+import qualified Data.Map.Strict as M
+import           Data.Maybe      (fromMaybe)
+import           Text.Parsec     (Parsec, between, count, digit, many, many1,
+                                  newline, parse, sepBy1, space, string)
 
 newtype CPU = CPU
     { _registries :: [Integer]
     } deriving (Show, Eq)
+
+data OpCode
+    = ADDR
+    | ADDI
+    | MULR
+    | MULI
+    | BANR
+    | BANI
+    | BORR
+    | BORI
+    | SETR
+    | SETI
+    | GTIR
+    | GTRI
+    | GTRR
+    | EQRI
+    | EQIR
+    | EQRR
+    deriving (Show, Eq, Ord)
+
+type OpCodeTable = M.Map Integer OpCode
 
 data Instruction = Instruction
     { _opcode :: Integer
@@ -41,9 +65,16 @@ loadInput = readFile "inputs/day-16.txt"
 fI :: (Integral a, Num b) => a -> b
 fI = fromIntegral
 
+mapSnd :: (a -> b) -> (c, a) -> (c, b)
+mapSnd f (c, a) = (c, f a)
+
 opCount :: Entry -> Integer
 opCount Entry {..} =
     genericLength $ filter (== _output) (allOps _input _instruction)
+
+opCodes :: Entry -> [OpCode]
+opCodes Entry {..} =
+    map snd $ filter ((== _output) . fst) (allOps' _input _instruction)
 
 number :: Parsec String () Integer
 number = read <$> (many space *> many1 digit)
@@ -76,6 +107,44 @@ parseInput input =
   where
     result = parse parseProblem "" input
 
+operations :: M.Map OpCode (Integer -> Integer -> Integer -> CPU -> CPU)
+operations =
+    M.fromList $
+    zip [ ADDR
+        , ADDI
+        , MULR
+        , MULI
+        , BANR
+        , BANI
+        , BORR
+        , BORI
+        , SETR
+        , SETI
+        , GTIR
+        , GTRI
+        , GTRR
+        , EQRI
+        , EQIR
+        , EQRR
+        ]
+        [ addr
+        , addi
+        , mulr
+        , muli
+        , banr
+        , bani
+        , borr
+        , bori
+        , setr
+        , seti
+        , gtir
+        , gtri
+        , gtrr
+        , eqir
+        , eqri
+        , eqrr
+        ]
+
 allOps :: CPU -> Instruction -> [CPU]
 allOps cpu (Instruction _ a b c) =
     [ addr a b c
@@ -96,6 +165,27 @@ allOps cpu (Instruction _ a b c) =
     , eqrr a b c
     ] <*>
     [cpu]
+
+allOps' :: CPU -> Instruction -> [(CPU, OpCode)]
+allOps' cpu ins =
+    zip (allOps cpu ins)
+        [ ADDR
+        , ADDI
+        , MULR
+        , MULI
+        , BANR
+        , BANI
+        , BORR
+        , BORI
+        , SETR
+        , SETI
+        , GTIR
+        , GTRI
+        , GTRR
+        , EQRI
+        , EQIR
+        , EQRR
+        ]
 
 addr :: Integer -> Integer -> Integer -> CPU -> CPU
 addr a b c cpu =
@@ -202,7 +292,30 @@ eqrr a b c cpu =
 moreThanThree :: Problem -> Integer
 moreThanThree input = genericLength . filter (>= 3) $ opCount <$> _entries input
 
+decode :: [Entry] -> [(Integer, OpCode)]
+decode entries =
+    nub . map (mapSnd head) . filter ((== 1) . length . snd) $
+    [(e ^. instruction . opcode, opCodes e) | e <- entries]
+
+decode' :: [Entry] -> OpCodeTable -> OpCodeTable
+decode' es opt = M.union opt (M.fromList decoded)
+  where
+    decoded =
+        nub . map (mapSnd head) . filter ((== 1) . length . snd) $
+        [(e ^. instruction . opcode, opCodes e \\ M.elems opt) | e <- es]
+
+execute :: OpCodeTable -> [Instruction] -> CPU
+execute opt = foldl f (CPU [0, 0, 0, 0])
+  where
+    f cpu Instruction {..} = operationFor _opcode _a _b _c cpu
+    operationFor _opcode = operations M.! (opt M.! _opcode)
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
     print $ moreThanThree input
+    let opt =
+            head . dropWhile ((/= 16) . M.size) .
+            iterate (decode' $ _entries input) $
+            M.empty
+    print $ execute opt (_instructions input)
