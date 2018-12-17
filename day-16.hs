@@ -65,7 +65,7 @@ parseEntry =
 
 parseProblem :: Parsec String () Problem
 parseProblem =
-    Problem <$> (many1 (parseEntry <* count 2 newline)) <*>
+    Problem <$> many1 (parseEntry <* count 2 newline) <*>
     (many newline *> parseInstruction `sepBy1` newline)
 
 parseInput :: String -> Problem
@@ -199,7 +199,10 @@ eqrr a b c cpu =
             then 1
             else 0)
 
+moreThanThree :: Problem -> Integer
+moreThanThree input = genericLength . filter (>= 3) $ opCount <$> _entries input
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
-    print $ length . filter (>= 3) $ opCount <$> _entries input
+    print $ moreThanThree input
