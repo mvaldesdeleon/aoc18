@@ -2,10 +2,11 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+import           Control.Concurrent (threadDelay)
 import           Control.Lens
-import           Data.List       (genericLength)
-import qualified Data.Map.Strict as M
-import           Data.Maybe      (mapMaybe)
+import           Data.List          (genericLength)
+import qualified Data.Map.Strict    as M
+import           Data.Maybe         (mapMaybe)
 
 data Acre
     = OpenGround
@@ -135,10 +136,18 @@ findCycle vs = go vs 0 M.empty
             Just iv -> (iv, i - iv)
             Nothing -> go vs (i + 1) (M.insert v i vals)
 
+animate :: [Area] -> IO ()
+animate =
+    mapM_
+        (\a -> do
+             print a
+             threadDelay 100000)
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
     let areas = iterate oneMinute input
+    -- animate areas
     print $ resourceValue (areas !! 10)
     let values = map resourceValue areas
     let (mu, lambda) = findCycle areas
