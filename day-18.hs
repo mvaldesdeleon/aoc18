@@ -11,7 +11,7 @@ data Acre
     = OpenGround
     | Trees
     | LumberYard
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 charToAcre :: Char -> Acre
 charToAcre =
@@ -30,7 +30,7 @@ acreToChar =
 data Size = Size
     { _width  :: Integer
     , _height :: Integer
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Ord)
 
 data Position = Position
     { _x :: Integer
@@ -46,7 +46,7 @@ type Acres = M.Map Position Acre
 data Area = Area
     { _acres :: Acres
     , _size  :: Size
-    }
+    } deriving (Eq, Ord)
 
 instance Show Area where
     show Area {..} = unlines . map row $ [0 .. height - 1]
@@ -62,6 +62,9 @@ loadInput = readFile "inputs/day-18.txt"
 
 mapSnd :: (a -> b) -> (c, a) -> (c, b)
 mapSnd f (c, a) = (c, f a)
+
+fI :: (Integral a, Num b) => a -> b
+fI = fromIntegral
 
 parseArea :: Size -> String -> Area
 parseArea size input = Area acres size
@@ -123,9 +126,21 @@ resourceValue :: Area -> Integer
 resourceValue =
     views acres (((*) <$> (`count` Trees) <*> (`count` LumberYard)) . M.elems)
 
+findCycle :: Ord a => [a] -> (Integer, Integer)
+findCycle vs = go vs 0 M.empty
+  where
+    go :: Ord a => [a] -> Integer -> M.Map a Integer -> (Integer, Integer)
+    go (v:vs) i vals =
+        case v `M.lookup` vals of
+            Just iv -> (iv, i - iv)
+            Nothing -> go vs (i + 1) (M.insert v i vals)
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
-    let area = iterate oneMinute input !! 10
-    -- print $ area
-    print $ resourceValue area
+    let areas = iterate oneMinute input
+    print $ resourceValue (areas !! 10)
+    let values = map resourceValue areas
+    let (mu, lambda) = findCycle areas
+    let target = 1000000000
+    print $ values !! (((target - fI mu) `mod` fI lambda) + fI mu)
