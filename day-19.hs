@@ -95,7 +95,7 @@ parseInstruction =
 
 parseCPU :: Parsec String () CPU
 parseCPU =
-    CPU <$> pure [0, 0, 0, 0, 0, 0] <*> (parseDecaration <* newline) <*>
+    CPU <$> pure [0, 0, 0, 0, 0, 0, 0] <*> (parseDecaration <* newline) <*>
     parseInstruction `sepBy1`
     newline
 
@@ -268,8 +268,25 @@ run cpu =
         then cpu
         else run $ execute cpu
 
+ips :: CPU -> [Integer]
+ips cpu =
+    if halted cpu
+        then []
+        else fromMaybe 0 (cpu ^? registries . ix (fI $ cpu ^. ipIx)) :
+             ips (execute cpu)
+
+factors :: Integer -> [Integer]
+factors n = go n 1 []
+  where
+    go n i fs
+        | i * i > n = fs
+        | n `mod` i == 0 = go n (i + 1) (i : n `div` i : fs)
+        | otherwise = go n (i + 1) fs
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
     print $ run input ^. registries
-    print $ run (input & (registries . ix 0) .~ 1) ^. registries
+    let cpus = iterate execute (input & (registries . ix 0) .~ 1)
+    let target = fromMaybe 0 $ cpus ^? ix 20 . registries . ix 2
+    print $ sum $ factors target
