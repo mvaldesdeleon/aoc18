@@ -95,7 +95,7 @@ parseInstruction =
 
 parseCPU :: Parsec String () CPU
 parseCPU =
-    CPU <$> pure [0, 0, 0, 0, 0, 0, 0] <*> (parseDecaration <* newline) <*>
+    CPU <$> pure [0, 0, 0, 0, 0, 0] <*> (parseDecaration <* newline) <*>
     parseInstruction `sepBy1`
     newline
 
@@ -140,8 +140,8 @@ operations =
         , gtir
         , gtri
         , gtrr
-        , eqir
         , eqri
+        , eqir
         , eqrr
         ]
 
