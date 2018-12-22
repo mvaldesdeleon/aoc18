@@ -3,15 +3,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 import           Control.Lens
+import           Control.Monad.Loops (whileM_)
 import           Control.Monad.State
+import           Data.List           (intersect)
 import qualified Data.List.Safe      as L
 import qualified Data.Map.Strict     as M
 import           Data.Maybe          (catMaybes, fromMaybe)
-import           Debug.Trace
 import           Text.Parsec         (Parsec, char, digit, many1, newline,
                                       parse, string)
-
-tr x = trace (show x) x
 
 loadInput :: IO String
 loadInput = readFile "inputs/day-22.txt"
@@ -38,7 +37,13 @@ tools =
 data Position = Position
     { _x :: Integer
     , _y :: Integer
-    } deriving (Show, Eq, Ord)
+    } deriving (Show, Eq)
+
+instance Ord Position where
+    Position xa ya <= Position xb yb =
+        if ya /= yb
+            then ya <= yb
+            else xa <= xb
 
 makeLenses ''Position
 
@@ -118,51 +123,107 @@ limit cfg = (cfg ^. target . x + cfg ^. target . y) * 7 `div` 2
 
 type Best = M.Map (Position, Tool) Integer
 
--- best :: Config -> Integer
--- best cfg = fromMaybe 0 $ evalState (b 0 (_target cfg) Torch []) M.empty
---   where
---     l = limit cfg
---     cave = buildCave cfg (Position l l)
---     b :: Integer -> Position -> Tool -> [Position] -> State Best (Maybe Integer)
---     b a p t path
---         | a > l = return Nothing
---         | p == origin && t == Torch = return $ Just 0
---         | p == origin && t /= Torch = return $ Just 7
---         | otherwise = do
---             val <- gets ((p, t) `M.lookup`)
---             case val of
---                 Just v -> return $ Just v
---                 Nothing -> do
---                     let pts = filter (`notElem` path) (neighbors p) >>= addTools
---                     opts <-
---                         catMaybes <$>
---                         forM
---                             pts
---                             (\(p, nt) ->
---                                  ((time t nt +) <$>) <$>
---                                  b (a + time t nt) p nt (p : path))
---                     case L.minimum opts of
---                         Just min -> do
---                             modify (M.insert (tr p, t) min)
---                             return $ Just min
---                         Nothing -> return Nothing
---     valid = within origin (Position l l)
---     neighbors :: Position -> [Position]
---     neighbors p =
---         filter
---             valid
---             [p & x %~ pred, p & y %~ pred, p & x %~ succ, p & y %~ succ]
---     addTools :: Position -> [(Position, Tool)]
---     addTools p = map ((,) p) $ maybe [] tools (p `M.lookup` cave)
---     time :: Tool -> Tool -> Integer
---     time t nt =
---         if t == nt
---             then 1
---             else 8
+data BState = BState
+    { _best   :: Best
+    , _next   :: Best
+    , _result :: Integer
+    } deriving (Show)
+
+makeLenses ''BState
+
+bestToTarget :: Config -> Integer
+bestToTarget cfg =
+    _result $
+    execState
+        buildBest
+        (BState M.empty (M.fromList [((origin, Torch), 0)]) bound)
+  where
+    bound = 1048
+    -- bound = trivialCost cfg
+    l = limit cfg
+    -- bottomRight = _target cfg
+    bottomRight = Position (cfg ^. target . y) (cfg ^. target . y)
+    cave = buildCave cfg bottomRight
+    hasNext :: State BState Bool
+    hasNext = uses next (not . M.null)
+    popNext :: State BState (Position, Tool, Integer)
+    popNext = do
+        (((p, t), i), ns) <- uses next M.deleteFindMin
+        next .= ns
+        return (p, t, i)
+    addResult :: Position -> Tool -> Integer -> State BState ()
+    addResult p t i = do
+        best %= M.insert (p, t) i
+        when (p == _target cfg && t == Torch) $ result .= i
+        next %=
+            M.unionWith
+                min
+                (M.fromList
+                     [ ((p, nt), i + time t nt)
+                     | (p, nt) <- neighbors p >>= addTools p
+                     ])
+    buildBest :: State BState ()
+    buildBest =
+        whileM_
+            hasNext
+            (do (p, t, i) <- popNext
+                res <- use result
+                when (i + minDistanceToTarget p <= res) $ do
+                    val <- uses best ((p, t) `M.lookup`)
+                    case val of
+                        Just v ->
+                            if v < i
+                                then return ()
+                                else addResult p t i
+                        Nothing -> addResult p t i)
+    valid = within origin bottomRight
+    neighbors :: Position -> [Position]
+    neighbors p =
+        filter
+            valid
+            [p & x %~ pred, p & x %~ succ, p & y %~ succ, p & y %~ pred]
+    addTools :: Position -> Position -> [(Position, Tool)]
+    addTools op np = map ((,) np) (ots `intersect` nts)
+      where
+        ots = maybe [] tools (op `M.lookup` cave)
+        nts = maybe [] tools (np `M.lookup` cave)
+    time :: Tool -> Tool -> Integer
+    time t nt =
+        if t == nt
+            then 1
+            else 8
+    minDistanceToTarget :: Position -> Integer
+    minDistanceToTarget p =
+        abs (cfg ^. target . x - p ^. x) + abs (cfg ^. target . y - p ^. y)
+
+trivialCost :: Config -> Integer
+trivialCost cfg = adjust . foldl f (0, Torch) . map (cave M.!) $ path
+  where
+    targetX = cfg ^. target . x
+    targetY = cfg ^. target . y
+    cave = buildCave' cfg
+    path =
+        [Position 0 y | y <- [0 .. targetY]] ++
+        [Position x targetY | x <- [0 .. targetX]]
+    f (i, t) r = (i + time r t, tool r t)
+    tool r t =
+        if t `elem` tools r
+            then t
+            else head $ tools r
+    time r t =
+        if t == tool r t
+            then 1
+            else 8
+    adjust (i, t) =
+        if t == Torch
+            then i
+            else i + 7
+
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
     let cave = buildCave' input
     print $ riskLevel cave
     -- print $ limit input
-    -- print $ best input
+    -- print $ trivialCost input
+    print $ bestToTarget input
