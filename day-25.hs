@@ -65,7 +65,7 @@ constellations ps = buildConstellations [] (S.fromList ps)
             then rs
             else let (s:ss) = st
                  in bfs (s : rs)
-                        (ss ++ ((fromMaybe [] (s `M.lookup` graph)) \\ rs))
+                        (ss ++ (fromMaybe [] (s `M.lookup` graph) \\ rs))
 
 main :: IO ()
 main = do
