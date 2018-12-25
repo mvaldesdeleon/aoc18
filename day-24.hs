@@ -5,6 +5,7 @@ import           Control.Monad   (join)
 import           Data.Function   (on)
 import qualified Data.List.Safe  as L
 import qualified Data.Map.Strict as M
+import           Data.Maybe      (catMaybes, fromMaybe)
 import           Data.Monoid     ((<>))
 import qualified Data.Set        as S
 import           Text.Parsec     (Parsec, anyChar, between, char, digit, endBy1,
@@ -35,7 +36,7 @@ data Group = Group
     , _attackDamage    :: Integer
     , _attackType      :: AttackType
     , _initiative      :: Integer
-    } deriving (Show)
+    } deriving (Show, Eq)
 
 makeLenses ''Group
 
@@ -74,6 +75,9 @@ data PlayerGroup =
 
 instance Eq PlayerGroup where
     (PlayerGroup pa ia _) == (PlayerGroup pb ib _) = pa == pb && ia == ib
+
+same :: PlayerGroup -> PlayerGroup -> Bool
+same pga pgb = pga == pgb && ((==) `on` grp) pga pgb
 
 instance Ord PlayerGroup where
     (PlayerGroup pa ia _) `compare` (PlayerGroup pb ib _) =
@@ -204,11 +208,38 @@ sumUnits pgs = sum (map groupUnits pgs)
     groupUnits pg = grp pg ^. units
 
 boost :: String -> Integer -> [PlayerGroup] -> [PlayerGroup]
-boost = undefined
+boost player amount [] = []
+boost player amount (pg@(PlayerGroup p i g):pgs)
+    | p == player =
+        PlayerGroup p i (g & attackDamage +~ amount) : boost player amount pgs
+    | otherwise = pg : boost player amount pgs
+
+result :: [[PlayerGroup]] -> [PlayerGroup]
+result =
+    fromMaybe (error "No result") .
+    L.head . dropWhile ((> 1) . length . toPlayers)
+
+result' :: [[PlayerGroup]] -> Maybe [PlayerGroup]
+result' (pga:pgb:pgs) =
+    if all (uncurry same) (zip pga pgb) && length pga == length pgb
+        then if length (toPlayers pga) == 1
+                 then Just pga
+                 else Nothing
+        else result' (pgb : pgs)
+result' _ = Nothing
 
 main :: IO ()
 main = do
     input <- parseInput <$> loadInput
+    print $ sumUnits . result . iterate fight $ input
+    let results =
+            result' . iterate fight <$>
+            (boost "Immune System" <$> [1 ..] <*> [input])
     print $
-        sumUnits . head . dropWhile ((> 1) . length . toPlayers) $
-        iterate fight input
+        sumUnits .
+        fromMaybe (error "No results") .
+        L.head .
+        dropWhile
+            ((/= "Immune System") .
+             playerName . fromMaybe (error "Empty result") . L.head) $
+        catMaybes results
