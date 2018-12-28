@@ -153,7 +153,7 @@ hasCycles = go (0, 0) $ S.fromList [(0, 0)]
     go pos set [Branch exprs] = any (go pos set) exprs -- this is wrong, needs to be a fold as we have to "thread" the set together, not just give all a copy
     go pos set (Step d:ts) =
         let newpos = move d pos
-        in newpos `S.member` set || go newpos (S.insert newpos set) ts
+         in newpos `S.member` set || go newpos (S.insert newpos set) ts
     go pos set _ = error "Un-normalized expression"
 
 type Graph = M.Map Position [Position]
@@ -166,7 +166,7 @@ buildGraph = go (0, 0) $ M.fromList [((0, 0), [])]
     go pos gr [Branch exprs] = foldl (go pos) gr exprs
     go pos gr (Step d:ts) =
         let newpos = move d pos
-        in go newpos (edge pos newpos . edge newpos pos $ gr) ts
+         in go newpos (edge pos newpos . edge newpos pos $ gr) ts
     go pos gr _ = error "Un-normalized expression"
     edge a b = M.insertWith (((.) . (.)) nub (++)) a [b]
 
@@ -178,7 +178,7 @@ bfsDepth gr pos = go 0 gr S.empty [(0, pos)]
     go d gr set ((pd, p):ps) =
         if p `S.notMember` set
             then let ns = zip (repeat (pd + 1)) $ M.findWithDefault [] p gr
-                 in go (max d pd) gr (S.insert p set) (ps ++ ns)
+                  in go (max d pd) gr (S.insert p set) (ps ++ ns)
             else go d gr set ps
 
 bfsDepthAtLeast1000 :: Graph -> Position -> Integer
@@ -193,7 +193,7 @@ bfsDepthAtLeast1000 gr pos = go 0 gr S.empty [(0, pos)]
                          if pd >= 1000
                              then c + 1
                              else c
-                 in go nc gr (S.insert p set) (ps ++ ns)
+                  in go nc gr (S.insert p set) (ps ++ ns)
             else go c gr set ps
 
 main :: IO ()

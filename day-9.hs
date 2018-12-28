@@ -72,12 +72,13 @@ playTurn = do
             modify
                 (\g@Game {..} ->
                      g
-                     { gPlayers =
-                           Z.replace
-                               (Z.cursor gPlayers + Z.cursor circle + nextMarble)
-                               gPlayers
-                     , gCircle = Z.delete circle
-                     })
+                         { gPlayers =
+                               Z.replace
+                                   (Z.cursor gPlayers + Z.cursor circle +
+                                    nextMarble)
+                                   gPlayers
+                         , gCircle = Z.delete circle
+                         })
         else modify
                  (\g@Game {..} ->
                       g {gCircle = Z.insert nextMarble (fpow right 2 gCircle)})

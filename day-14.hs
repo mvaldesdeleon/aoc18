@@ -32,9 +32,9 @@ make = do
     modify
         (\r@Recipes {..} ->
              r
-             { rFirst = advance rFirst rScores
-             , rSecond = advance rSecond rScores
-             })
+                 { rFirst = advance rFirst rScores
+                 , rSecond = advance rSecond rScores
+                 })
     gets (fromIntegral . M.size . rScores)
 
 newScores :: Integer -> Integer -> Scores -> [Integer]

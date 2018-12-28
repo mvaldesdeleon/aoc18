@@ -248,10 +248,10 @@ advanceCart :: Mine -> Cart -> Cart
 advanceCart _ Removed = Removed
 advanceCart Mine {..} c@Cart {..} =
     c
-    { cPosition = newPosition
-    , cDirection = newDirection
-    , cNextIntersection = newNextIntersection
-    }
+        { cPosition = newPosition
+        , cDirection = newDirection
+        , cNextIntersection = newNextIntersection
+        }
   where
     newPosition = move cDirection cPosition
     trackAhead = mTracks M.! newPosition

@@ -80,12 +80,12 @@ sleepIntervals = start . sort
             (FallAsleep, WakeUp) ->
                 let tsFrom = entryTimestamp f
                     tsTo = entryTimestamp t
-                in SleepInterval
-                       guardId
-                       tsFrom
-                       tsTo
-                       (tsMinute tsTo - tsMinute tsFrom) :
-                   intervals guardId es
+                 in SleepInterval
+                        guardId
+                        tsFrom
+                        tsTo
+                        (tsMinute tsTo - tsMinute tsFrom) :
+                    intervals guardId es
             (ShiftStart guardId, _) -> intervals guardId (t : es)
             _ -> error "Expected FallAsleep:WakeUp"
     intervals _ [] = []

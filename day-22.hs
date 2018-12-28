@@ -97,8 +97,8 @@ buildCave Config {..} bottomRight =
   where
     f (cave, gis) p =
         let gi = geologicIndex gis p
-        in ( M.insert p (toEnum . fI $ erosionLevel gi `mod` 3) cave
-           , M.insert p gi gis)
+         in ( M.insert p (toEnum . fI $ erosionLevel gi `mod` 3) cave
+            , M.insert p gi gis)
     geologicIndex gis p@Position {..}
         | p == origin || p == _target = 0
         | _y == 0 = _x * 16807

@@ -189,9 +189,9 @@ attack pg tg = foldl individualAttack pg . L.sortBy groupInitiative $ zip pg tg
     performAttack atk def pgs =
         let mna = L.find (== atk) pgs
             mnd = L.find (== def) pgs
-        in case (mna, mnd) of
-               (Just na, Just nd) -> replaceGroup nd (na `groupAttacks` nd) pgs
-               _ -> pgs
+         in case (mna, mnd) of
+                (Just na, Just nd) -> replaceGroup nd (na `groupAttacks` nd) pgs
+                _ -> pgs
     groupAttacks = attacks `on` grp
     replaceGroup pg@(PlayerGroup p i _) g =
         (\(init, _:tail) -> init ++ PlayerGroup p i g : tail) . L.break (== pg)

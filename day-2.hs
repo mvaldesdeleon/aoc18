@@ -14,7 +14,6 @@ checksumParams id = (2 `elem` freqs, 3 `elem` freqs)
   where
     freqs = map length . group . sort $ id
 
-
 addParams :: (Integer, Integer) -> (Bool, Bool) -> (Integer, Integer)
 addParams (n, m) (p, q) =
     ( if p

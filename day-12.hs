@@ -73,9 +73,9 @@ parseInput input =
 
 extend cfg@Config {..} =
     cfg
-    { cfgIndex = cfgIndex - 5
-    , cfgState = replicate 5 Empty ++ cfgState ++ replicate 5 Empty
-    }
+        { cfgIndex = cfgIndex - 5
+        , cfgState = replicate 5 Empty ++ cfgState ++ replicate 5 Empty
+        }
 
 grow :: Config -> Config
 grow cfg@Config {..} =

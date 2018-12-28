@@ -54,18 +54,20 @@ constellations ps = buildConstellations [] (S.fromList ps)
         if S.null s
             then cs
             else let c = nextConstellation s
-                 in buildConstellations (c : cs) (S.difference s (S.fromList c))
+                  in buildConstellations
+                         (c : cs)
+                         (S.difference s (S.fromList c))
     nextConstellation :: S.Set Point -> [Point]
     nextConstellation s =
         let p = S.findMin s
-        in bfs [] [p]
+         in bfs [] [p]
     bfs :: [Point] -> [Point] -> [Point]
     bfs rs st =
         if null st
             then rs
             else let (s:ss) = st
-                 in bfs (s : rs)
-                        (ss ++ (fromMaybe [] (s `M.lookup` graph) \\ rs))
+                  in bfs (s : rs)
+                         (ss ++ (fromMaybe [] (s `M.lookup` graph) \\ rs))
 
 main :: IO ()
 main = do

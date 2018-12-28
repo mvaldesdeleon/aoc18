@@ -191,50 +191,50 @@ addr :: Integer -> Integer -> Integer -> CPU -> CPU
 addr a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
         rb = fromMaybe 0 $ cpu ^? registries . ix (fI b)
-    in cpu & (registries . ix (fI c)) .~ (ra + rb)
+     in cpu & (registries . ix (fI c)) .~ (ra + rb)
 
 addi :: Integer -> Integer -> Integer -> CPU -> CPU
 addi a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
-    in cpu & (registries . ix (fI c)) .~ (ra + b)
+     in cpu & (registries . ix (fI c)) .~ (ra + b)
 
 mulr :: Integer -> Integer -> Integer -> CPU -> CPU
 mulr a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
         rb = fromMaybe 0 $ cpu ^? registries . ix (fI b)
-    in cpu & (registries . ix (fI c)) .~ (ra * rb)
+     in cpu & (registries . ix (fI c)) .~ (ra * rb)
 
 muli :: Integer -> Integer -> Integer -> CPU -> CPU
 muli a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
-    in cpu & (registries . ix (fI c)) .~ (ra * b)
+     in cpu & (registries . ix (fI c)) .~ (ra * b)
 
 banr :: Integer -> Integer -> Integer -> CPU -> CPU
 banr a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
         rb = fromMaybe 0 $ cpu ^? registries . ix (fI b)
-    in cpu & (registries . ix (fI c)) .~ (ra .&. rb)
+     in cpu & (registries . ix (fI c)) .~ (ra .&. rb)
 
 bani :: Integer -> Integer -> Integer -> CPU -> CPU
 bani a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
-    in cpu & (registries . ix (fI c)) .~ (ra .&. b)
+     in cpu & (registries . ix (fI c)) .~ (ra .&. b)
 
 borr :: Integer -> Integer -> Integer -> CPU -> CPU
 borr a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
         rb = fromMaybe 0 $ cpu ^? registries . ix (fI b)
-    in cpu & (registries . ix (fI c)) .~ (ra .|. rb)
+     in cpu & (registries . ix (fI c)) .~ (ra .|. rb)
 
 bori :: Integer -> Integer -> Integer -> CPU -> CPU
 bori a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
-    in cpu & (registries . ix (fI c)) .~ (ra .|. b)
+     in cpu & (registries . ix (fI c)) .~ (ra .|. b)
 
 setr :: Integer -> Integer -> Integer -> CPU -> CPU
 setr a _ c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
-    in cpu & (registries . ix (fI c)) .~ ra
+     in cpu & (registries . ix (fI c)) .~ ra
 
 seti :: Integer -> Integer -> Integer -> CPU -> CPU
 seti a _ c cpu = cpu & (registries . ix (fI c)) .~ a
@@ -242,52 +242,52 @@ seti a _ c cpu = cpu & (registries . ix (fI c)) .~ a
 gtir :: Integer -> Integer -> Integer -> CPU -> CPU
 gtir a b c cpu =
     let rb = fromMaybe 0 $ cpu ^? registries . ix (fI b)
-    in cpu & (registries . ix (fI c)) .~
-       (if a > rb
-            then 1
-            else 0)
+     in cpu & (registries . ix (fI c)) .~
+        (if a > rb
+             then 1
+             else 0)
 
 gtri :: Integer -> Integer -> Integer -> CPU -> CPU
 gtri a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
-    in cpu & (registries . ix (fI c)) .~
-       (if ra > b
-            then 1
-            else 0)
+     in cpu & (registries . ix (fI c)) .~
+        (if ra > b
+             then 1
+             else 0)
 
 gtrr :: Integer -> Integer -> Integer -> CPU -> CPU
 gtrr a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
         rb = fromMaybe 0 $ cpu ^? registries . ix (fI b)
-    in cpu & (registries . ix (fI c)) .~
-       (if ra > rb
-            then 1
-            else 0)
+     in cpu & (registries . ix (fI c)) .~
+        (if ra > rb
+             then 1
+             else 0)
 
 eqir :: Integer -> Integer -> Integer -> CPU -> CPU
 eqir a b c cpu =
     let rb = fromMaybe 0 $ cpu ^? registries . ix (fI b)
-    in cpu & (registries . ix (fI c)) .~
-       (if a == rb
-            then 1
-            else 0)
+     in cpu & (registries . ix (fI c)) .~
+        (if a == rb
+             then 1
+             else 0)
 
 eqri :: Integer -> Integer -> Integer -> CPU -> CPU
 eqri a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
-    in cpu & (registries . ix (fI c)) .~
-       (if ra == b
-            then 1
-            else 0)
+     in cpu & (registries . ix (fI c)) .~
+        (if ra == b
+             then 1
+             else 0)
 
 eqrr :: Integer -> Integer -> Integer -> CPU -> CPU
 eqrr a b c cpu =
     let ra = fromMaybe 0 $ cpu ^? registries . ix (fI a)
         rb = fromMaybe 0 $ cpu ^? registries . ix (fI b)
-    in cpu & (registries . ix (fI c)) .~
-       (if ra == rb
-            then 1
-            else 0)
+     in cpu & (registries . ix (fI c)) .~
+        (if ra == rb
+             then 1
+             else 0)
 
 moreThanThree :: Problem -> Integer
 moreThanThree input = genericLength . filter (>= 3) $ opCount <$> _entries input
