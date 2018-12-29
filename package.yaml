@@ -1,0 +1,359 @@
+name:                aoc18
+version:             0.1.0.0
+github:              "mvaldesdeleon/aoc18"
+license:             BSD3
+author:              "Martin Valdes de Leon"
+maintainer:          "m.valdesdeleon@gmail.com"
+copyright:           "Copyright (c) 2018 Martin Valdes de Leon"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+data-files:
+- inputs/*.txt
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/mvaldesdeleon/aoc18#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- mtl
+- containers
+- lens
+- listsafe
+- monad-loops
+- parsec
+- ListZipper
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wredundant-constraints
+
+default-extensions: []
+
+library:
+  source-dirs: src
+  generated-other-modules: Paths_aoc18
+
+executables:
+  day1:
+    main:                Day1Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day1Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day2:
+    main:                Day2Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day2Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day3:
+    main:                Day3Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day3Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day4:
+    main:                Day4Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day4Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day5:
+    main:                Day5Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day5Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day6:
+    main:                Day6Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day6Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day7:
+    main:                Day7Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day7Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day8:
+    main:                Day8Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day8Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day9:
+    main:                Day9Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day9Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day10:
+    main:                Day10Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day10Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day11:
+    main:                Day11Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day11Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day12:
+    main:                Day12Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day12Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day13:
+    main:                Day13Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day13Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day14:
+    main:                Day14Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day14Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day15:
+    main:                Day15Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day15Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day16:
+    main:                Day16Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day16Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day17:
+    main:                Day17Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day17Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day18:
+    main:                Day18Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day18Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day19:
+    main:                Day19Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day19Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day20:
+    main:                Day20Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day20Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day21:
+    main:                Day21Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day21Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day22:
+    main:                Day22Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day22Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day23:
+    main:                Day23Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day23Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day24:
+    main:                Day24Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day24Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+  day25:
+    main:                Day25Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is Day25Main
+    dependencies:
+    - aoc18
+    other-modules:
+    - Paths_aoc18
+
+tests:
+  aoc18-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - aoc18

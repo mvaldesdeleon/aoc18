@@ -1,0 +1,6 @@
+.stack-work/
+aoc18.cabal
+*~
+*.hi
+*.o
+*.dyn*
