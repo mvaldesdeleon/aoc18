@@ -39,11 +39,6 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
 - ListZipper-1.2.0.2@sha256:5bbb5a4cc7f1cae962310407f711b874c087b48a0ba39b9fcce84cdb0ff5244c
-- hindent-5.2.7@sha256:35a1883948d2a2d9b663630d0e5c33fcb303149ac0b1f42a59f5e8fbc88b31e5
-- stylish-haskell-0.9.2.0@sha256:c43a964348b144c9dbe82391b27a9010a53405a8edf3db80abde0ca1d7117911
-- aeson-1.3.1.1@sha256:1ab29743b4c4c9be7df57200ed2c8779048adda4cead075944b7b471e93ed4c3
-- containers-0.5.11.0@sha256:28ad7337057442f75bc689315ab4ec7bdf5e6b2c39668f306672cecd82c02798
-- yaml-0.8.32@sha256:691cbf4f6a362df5a76464f42e328c99723f3d525767e3a1e78ee112ab723f7a
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
